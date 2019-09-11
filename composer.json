@@ -1,0 +1,28 @@
+{
+  "name": "ether/imager-thumbor",
+  "description": "A Thumbor transformer for Imager",
+  "version": "1.0.0",
+  "type": "craft-plugin",
+  "license": "MIT",
+  "minimum-stability": "dev",
+  "require": {
+    "craftcms/cms": "^3.1.0",
+    "aelvan/imager": "^2.1.10"
+  },
+  "autoload": {
+    "psr-4": {
+      "ether\\imagerthumbor\\": "src/"
+    }
+  },
+  "support": {
+    "docs": "https://github.com/ethercreative/imager-thumbor"
+  },
+  "extra": {
+    "handle": "imager-thumbor",
+    "name": "Imager Thumbor Transformer",
+    "developer": "Ether Creative",
+    "developerUrl": "https://ethercreative.co.uk",
+    "class": "ether\\imagerthumbor\\ImagerThumbor",
+    "schemaVersion": "0.0.1"
+  }
+}
