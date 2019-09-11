@@ -9,6 +9,7 @@
 namespace ether\imagerthumbor;
 
 use aelvan\imager\models\TransformedImageInterface;
+use craft\base\Model;
 
 /**
  * Class ThumborTransformedImage
@@ -16,7 +17,21 @@ use aelvan\imager\models\TransformedImageInterface;
  * @author  Ether Creative
  * @package ether\imagerthumbor
  */
-class ThumborTransformedImage implements TransformedImageInterface
+class ThumborTransformedImage extends Model implements TransformedImageInterface
 {
+
+	// Properties
+	// =========================================================================
+
+	/** @var string */
+	public $url;
+
+	// Methods
+	// =========================================================================
+
+	public function __toString ()
+	{
+		return $this->url;
+	}
 
 }

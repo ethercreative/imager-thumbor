@@ -8,15 +8,15 @@
 
 namespace ether\imagerthumbor;
 
-use Yii;
+use craft\base\Model;
 
 /**
- * Class ThumborConfig
+ * Class Settings
  *
  * @author  Ether Creative
  * @package ether\imagerthumbor
  */
-class ThumborConfig
+class Settings extends Model
 {
 
 	// Properties
@@ -25,16 +25,13 @@ class ThumborConfig
 	/** @var string */
 	public $domain;
 
+	/** @var string|null */
+	public $securityKey;
+
+	/** @var bool */
+	public $local = false;
+
 	/** @var bool */
 	public $webp = false;
-
-	// Constructor
-	// =========================================================================
-
-	public function __construct ($config = [])
-	{
-		if (!empty($config))
-			Yii::configure($this, $config);
-	}
 
 }

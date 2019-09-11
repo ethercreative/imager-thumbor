@@ -8,9 +8,6 @@
 
 namespace ether\imagerthumbor;
 
-use aelvan\imager\exceptions\ImagerException;
-use aelvan\imager\models\ConfigModel;
-use aelvan\imager\services\ImagerService;
 use aelvan\imager\transformers\TransformerInterface;
 use craft\elements\Asset;
 
@@ -28,8 +25,6 @@ class Transformer implements TransformerInterface
 	 * @param array        $transforms
 	 *
 	 * @return array|null
-	 *
-	 * @throws ImagerException
 	 */
 	public function transform ($image, $transforms)
 	{
@@ -44,15 +39,71 @@ class Transformer implements TransformerInterface
 	// Private
 	// =========================================================================
 
+	/**
+	 * @param Asset $image
+	 * @param array $transform
+	 *
+	 * @return ThumborTransformedImage
+	 */
 	private function _getTransformedImage ($image, $transform): ThumborTransformedImage
 	{
-		// FIXME: Can't use Imagers config file, have to use own :(
-		/** @var ConfigModel $config */
-		$config = ImagerService::getConfig();
-		$thumborConfigArr = $config->getSetting('thumborConfig', $transform);
-		$thumborConfig = new ThumborConfig($thumborConfigArr ?? []);
+		/** @var Settings $settings */
+		$settings = ImagerThumbor::getInstance()->getSettings();
 
-		\Craft::dd(compact('thumborConfig', 'image', 'transform'));
+		$parts = [];
+
+		// TODO: build url (remember webp setting, if it's even possible)
+
+		if ($settings->local)
+		{
+			// TODO: upload file to thumbor server (as unique)
+
+			$parts[] = ''; // TODO: Use returned file location as file path
+		}
+		else
+		{
+			$parts[] = $image->getUrl();
+		}
+
+		$url = [$settings->domain];
+
+		if ($settings->securityKey)
+			$url[] = $this->_generateKey($parts, $settings->securityKey);
+		else
+			$url[] = 'unsafe';
+
+		$url = $this->_join($url);
+
+		if ($settings->local)
+		{
+			// TODO: Get the URL & save
+			// TODO: Delete image on thumbor server
+
+			$url = ''; // TODO: whatever the local url is
+		}
+
+		return new ThumborTransformedImage([
+			'url' => $url,
+		]);
+	}
+
+	// Helpers
+	// =========================================================================
+
+	private function _generateKey ($parts, $key)
+	{
+		// TODO: this
+
+		return '';
+	}
+
+	private function _join ($parts = [])
+	{
+		$parts = array_map(function ($part) {
+			return rtrim($part, '/');
+		}, $parts);
+
+		return implode('/', $parts);
 	}
 
 }

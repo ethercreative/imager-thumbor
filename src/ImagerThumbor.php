@@ -27,4 +27,9 @@ class ImagerThumbor extends Plugin
 		ImagerService::$transformers['thumbor'] = Transformer::class;
 	}
 
+	protected function createSettingsModel ()
+	{
+		return new Settings();
+	}
+
 }
