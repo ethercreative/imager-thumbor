@@ -34,7 +34,8 @@ when appropriate, along side the original image type.
 *Default: `null`*  
 *Allowed values: `null`, `'jpg'`, `'png'`, `'gif'`, `'webp'`*
 
-Format of the created image. If unset (default) it will be the same format as the source image.
+Format of the created image. If unset (default) it will be the same format as 
+the source image.
 
 ### trim [bool|string]
 
@@ -42,20 +43,29 @@ Format of the created image. If unset (default) it will be the same format as th
 
 Removing surrounding space in images can be done using the trim option.
 
-Unless specified trim assumes the top-left pixel color and no tolerance (more on tolerance below).
+Unless specified trim assumes the top-left pixel color and no tolerance (more 
+on tolerance below).
 
-If you need to specify the orientation from where to get the pixel color, just set the value to `top-left` for the top-left pixel color or `bottom-right` for the bottom-right pixel color.
+If you need to specify the orientation from where to get the pixel color, just 
+set the value to `top-left` for the top-left pixel color or `bottom-right` for 
+the bottom-right pixel color.
 
-Trim also supports color tolerance. The euclidian distance between the colors of the reference pixel and the surrounding pixels is used. If the distance is within the tolerance they’ll get trimmed. For a RGB image the tolerance would be within the range 0-442.
+Trim also supports color tolerance. The euclidian distance between the colors of 
+the reference pixel and the surrounding pixels is used. If the distance is 
+within the tolerance they’ll get trimmed. For a RGB image the tolerance would 
+be within the range 0-442.
 
 ### mode [string]
 
 *Default: `crop`*  
 *Allowed values: `crop`, `fit`, `stretch`*
 
-**`crop`:** Crops the image to the given size, scaling the image to fill as much as possible of the size.  
-**`fit`:** Scales the image to fit within the given size while maintaining the aspect ratio of the original image.  
-**`stretch`:** Scales the image to the given size, stretching it if the aspect ratio is different from the original.
+**`crop`:** Crops the image to the given size, scaling the image to fill as much 
+as possible of the size.  
+**`fit`:** Scales the image to fit within the given size while maintaining the 
+aspect ratio of the original image.  
+**`stretch`:** Scales the image to the given size, stretching it if the aspect 
+ratio is different from the original.
 
 ### width [int|string]
 
@@ -128,8 +138,8 @@ Applies a gaussian blur to the image.
 Accepts a single integer as the `radius` of the blur, or an array matching 
 `[radius, sigma]`.
 
-- `radius` is used in the gaussian function to generate a matrix, maximum value is 
-150. The bigger the radius more blurred will be the image.
+- `radius` is used in the gaussian function to generate a matrix, maximum value
+is 150. The bigger the radius more blurred will be the image.
 - `sigma` is optional and defaults to the same value as the `radius`. Sigma used
 in the gaussian function.
 
@@ -160,7 +170,8 @@ Accepts an array of arguments `[matrix_items, number_of_columns, should_normaliz
 
 - `matrix_items` Semicolon separated matrix items
 - `number_of_columns` Number of columns in the matrix
-- `should_normalize` Whether or not we should divide each matrix item by the sum of all items
+- `should_normalize` Whether or not we should divide each matrix item by the sum
+of all items
 
 Example:
 
@@ -221,3 +232,32 @@ noise to add to the image.
 Applies proportion to height and width passed for cropping. Accepts a float 
 between 0 - 1 as the percentage of the proportion (i.e. 0.5 would scale the 
 image down to 50% after cropping).
+
+### quality [int]
+
+Set the overall quality of a JPEG image (does nothing for PNGs or GIFs). Expects
+a value between 0 - 100 as the quality level (in %).
+
+### rgb [array]
+
+Will change the amount of color in each of the three channels.
+
+Accepts an array of RGB values `[r, g, b]` ranging from -100 to 100.
+
+### rotate [int]
+
+Rotate the given image according to the angle value passed. Should be set to an 
+angle between 0 - 359. Numbers greater or equal than 360 will be transformed to 
+a equivalent angle between 0 and 359.
+
+### sharpen [array]
+
+Enhances apparent sharpness of the image. It’s heavily based on Marco Rossini’s 
+excellent Wavelet sharpen GIMP plugin.
+
+Accepts an array with the following values:
+`[sharpen_amount, sharpen_radius, luminance_only]`
+
+- `sharpen_amount` - Sharpen amount. Typical values are between 0.0 and 10.0.
+- `sharpen_radius` - Sharpen radius. Typical values are between 0.0 and 2.0.
+- `luminance_only` - Sharpen only luminance channel. Values can be `true` or `false`
