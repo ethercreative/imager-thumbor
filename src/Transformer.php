@@ -8,8 +8,16 @@
 
 namespace ether\imagerthumbor;
 
+use aelvan\imager\exceptions\ImagerException;
+use aelvan\imager\externalstorage\ImagerStorageInterface;
+use aelvan\imager\models\LocalSourceImageModel;
+use aelvan\imager\models\LocalTargetImageModel;
+use aelvan\imager\services\ImagerService;
 use aelvan\imager\transformers\TransformerInterface;
+use Craft;
 use craft\elements\Asset;
+use craft\helpers\FileHelper;
+use yii\base\ErrorException;
 
 /**
  * Class Transformer
@@ -25,13 +33,23 @@ class Transformer implements TransformerInterface
 	 * @param array        $transforms
 	 *
 	 * @return array|null
+	 * @throws ImagerException
+	 * @throws ErrorException
 	 */
 	public function transform ($image, $transforms)
 	{
+		if ($image->getExtension() === 'svg')
+		{
+			Craft::error('Thumbor does not support SVG images.');
+			return null;
+		}
+
+		$sourceModel = new LocalSourceImageModel($image);
+
 		$transformedImages = [];
 
 		foreach ($transforms as $transform)
-			$transformedImages[] = $this->_getTransformedImage($image, $transform);
+			$transformedImages[] = $this->_getTransformedImage($sourceModel, $image, $transform);
 
 		return $transformedImages;
 	}
@@ -40,12 +58,15 @@ class Transformer implements TransformerInterface
 	// =========================================================================
 
 	/**
-	 * @param Asset $image
-	 * @param array $transform
+	 * @param LocalSourceImageModel $sourceModel
+	 * @param Asset                 $image
+	 * @param array                 $transform
 	 *
 	 * @return ThumborTransformedImage
+	 * @throws ImagerException
+	 * @throws ErrorException
 	 */
-	private function _getTransformedImage ($image, $transform): ThumborTransformedImage
+	private function _getTransformedImage ($sourceModel, $image, $transform): ThumborTransformedImage
 	{
 		/** @var Settings $settings */
 		$settings = ImagerThumbor::getInstance()->getSettings();
@@ -93,16 +114,19 @@ class Transformer implements TransformerInterface
 		// Size
 
 		$size = [];
+		$ratio = @$transform['ratio'];
+		$width = @$transform['width'];
+		$height = @$transform['height'];
 
-		if ($width = @$transform['width'])
+		if ($width)
 			$size[] = $width;
 		else
-			$size[] = '';
+			$size[] = $ratio && $height ? $height * $ratio : '';
 
-		if ($height = @$transform['height'])
+		if ($height)
 			$size[] = $height;
 		else
-			$size[] = '';
+			$size[] = $ratio && $width ? $width * $ratio : '';
 
 		if (!empty(array_filter($size)))
 			$parts[] = implode('x', $size);
@@ -114,6 +138,9 @@ class Transformer implements TransformerInterface
 			list($x, $y) = explode(' ', $position);
 			$x = (int) ($image->getWidth() * (floatval($x) / 100));
 			$y = (int) ($image->getHeight() * (floatval($y) / 100));
+
+			if ($x < 1) $x++;
+			if ($y < 1) $y++;
 
 			$filters['focal'] = $x . 'x' . $y . ':' . ($x - 1) . 'x' . ($y - 1);
 		}
@@ -155,12 +182,41 @@ class Transformer implements TransformerInterface
 			$parts[] = implode(':', $f);
 		}
 
+		// Saving
+
+		$config = ImagerService::getConfig();
+		$client = Craft::createGuzzleClient();
+
+		$restEndpoint = $this->_join([$settings->domain, 'image']);
+		$uploadedPath = null;
+
+		$targetModel = new LocalTargetImageModel($sourceModel, $transform);
+
 		if ($settings->local)
 		{
-			// TODO: Check to see if we have a cached version available
-			// TODO: upload file to thumbor server (as unique)
+			if (
+				!$config->getSetting('cacheEnabled', $transform) ||
+			    !file_exists($targetModel->getFilePath()) ||
+			    (
+			    	($config->getSetting('cacheDuration', $transform) !== false) &&
+				    (FileHelper::lastModifiedTime($targetModel->getFilePath()) + $config->getSetting('cacheDuration', $transform) < time())
+			    )
+			) {
+				$sourceModel->getLocalCopy();
+				$targetModel->isNew = true;
 
-			$parts[] = ''; // TODO: Use returned file location as file path
+				$name = uniqid('tb_') . $sourceModel->filename;
+
+				$posted = $client->post($restEndpoint, [
+					'headers' => [
+						'Slug' => $name,
+					],
+					'body' => fopen($sourceModel->getFilePath(), 'r'),
+				]);
+
+				$uploadedPath = str_replace('/image/', '', $posted->getHeader('Location')[0]);
+				$parts[] = $uploadedPath;
+			}
 		}
 		else
 		{
@@ -178,15 +234,71 @@ class Transformer implements TransformerInterface
 
 		if ($settings->local)
 		{
-			// TODO: Get the URL & save
-			// TODO: Delete image on thumbor server
+			if ($targetModel->isNew)
+			{
 
-			$url = ''; // TODO: whatever the local url is
+				if (empty($config->storages))
+				{
+					FileHelper::writeToFile(
+						$targetModel->getFilePath(),
+						$client->get($url)->getBody()->getContents()
+					);
+				}
+				else
+				{
+					foreach ($config->storages as $storage)
+					{
+						if (isset(ImagerService::$storage[$storage]))
+						{
+							$storageSettings = $config->storageConfig[$storage] ?? null;
+
+							if ($storageSettings)
+							{
+								/** @var ImagerStorageInterface $storageClass */
+								$storageClass = ImagerService::$storage[$storage];
+								$storageClass::upload(
+									$url,
+									$targetModel->getFilePath(),
+									true,
+									$storageSettings
+								);
+							}
+							else
+							{
+								$msg = 'Could not find settings for storage "' . $storage . '"';
+								Craft::error($msg, __METHOD__);
+								throw new ImagerException($msg);
+							}
+						}
+						else
+						{
+							$msg = 'Could not find a registered storage with handle "' . $storage . '"';
+							Craft::error($msg, __METHOD__);
+							throw new ImagerException($msg);
+						}
+					}
+				}
+
+				$client->delete(
+					$this->_join([
+						$restEndpoint,
+						$uploadedPath,
+					])
+				);
+			}
+		}
+		else
+		{
+			$targetModel->filename = $sourceModel->filename;
+			$targetModel->path = $sourceModel->path;
+			$targetModel->url = $url;
 		}
 
-		return new ThumborTransformedImage([
-			'url' => $url,
-		]);
+		return new ThumborTransformedImage(
+			$targetModel,
+			$sourceModel,
+			$transform
+		);
 	}
 
 	// Helpers

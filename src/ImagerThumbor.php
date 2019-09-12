@@ -25,6 +25,7 @@ class ImagerThumbor extends Plugin
 		parent::init();
 
 		ImagerService::$transformers['thumbor'] = Transformer::class;
+		ImagerService::$transformKeyTranslate['trim'] = 'T';
 	}
 
 	protected function createSettingsModel ()

@@ -20,12 +20,10 @@ The security key defined in your Thumbor config file. See
 ### local [bool]
 
 Will store the file locally (or using the remote storage service defined in 
-Imager's config file), rather than using the Thumbor URL.
-
-### webp [bool]
-
-If true, a webp version of the transformed image will be generated and served
-when appropriate, along side the original image type.
+Imager's config file), rather than using the Thumbor URL. You will need to 
+enable Thumbor's REST endpoint for this to work. See
+[How to upload Images](https://thumbor.readthedocs.io/en/latest/how_to_upload_images.html).
+You will also need to set the loader to `thumbor.loaders.file_loader`.
 
 ## Transform Options
 
@@ -92,6 +90,15 @@ has a height of 400px, the new image will also have that height.
 
 A negative value will flip the image. Setting `'-0'` (in quotes) will flip the 
 image without resizing it.
+
+### ratio [int|float]
+
+An aspect ratio (width/height) that is used to calculate the missing size, if
+width or height is not provided.
+
+```twig
+{ ratio: 16/9 }
+```
 
 ### effects [array]
 
