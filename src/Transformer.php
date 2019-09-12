@@ -62,11 +62,11 @@ class Transformer implements TransformerInterface
 	 * @param Asset                 $image
 	 * @param array                 $transform
 	 *
-	 * @return ThumborTransformedImage
+	 * @return ThumborTransformedImage|ThumborTransformedRemoteImage
 	 * @throws ImagerException
 	 * @throws ErrorException
 	 */
-	private function _getTransformedImage ($sourceModel, $image, $transform): ThumborTransformedImage
+	private function _getTransformedImage ($sourceModel, $image, $transform)
 	{
 		/** @var Settings $settings */
 		$settings = ImagerThumbor::getInstance()->getSettings();
@@ -289,9 +289,14 @@ class Transformer implements TransformerInterface
 		}
 		else
 		{
-			$targetModel->filename = $sourceModel->filename;
-			$targetModel->path = $sourceModel->path;
 			$targetModel->url = $url;
+		}
+
+		if (!$settings->local)
+		{
+			return new ThumborTransformedRemoteImage([
+				'url' => $targetModel->url,
+			]);
 		}
 
 		return new ThumborTransformedImage(
