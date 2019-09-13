@@ -8,6 +8,11 @@ Config options should be added to your `imager-thumbor.php` file in your config
 folder. To use Thumbor, set the `transformer` option to "thumbor" in your 
 `imager.php` config file.
 
+When setting up Thumbor, we recommend using the 
+`thumbor.loaders.file_loader_http_fallback` loader to account for files with and 
+without public urls (see
+[Image loader](https://thumbor.readthedocs.io/en/latest/image_loader.html).
+
 ### domain [string]
 
 The domain (including port) where Thumbor can be accessed.
@@ -23,8 +28,6 @@ Will store the file locally (or using the remote storage service defined in
 Imager's config file), rather than using the Thumbor URL. You will need to 
 enable Thumbor's REST endpoint for this to work (see
 [How to upload Images](https://thumbor.readthedocs.io/en/latest/how_to_upload_images.html)).
-You will also need to set the loader to `thumbor.loaders.file_loader` (see
-[Image loader](https://thumbor.readthedocs.io/en/latest/image_loader.html).
 
 ## Transform Options
 

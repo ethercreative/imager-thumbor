@@ -31,7 +31,4 @@ class Settings extends Model
 	/** @var bool */
 	public $local = false;
 
-	/** @var bool */
-	public $webp = false;
-
 }

@@ -28,6 +28,24 @@ use yii\base\ErrorException;
 class Transformer implements TransformerInterface
 {
 
+	// Properties
+	// =========================================================================
+
+	public static $uploadedImages = [];
+
+	/** @var Settings */
+	private $_settings;
+	private $_restEndpoint;
+
+	// Methods
+	// =========================================================================
+
+	public function __construct ()
+	{
+		$this->_settings = ImagerThumbor::getInstance()->getSettings();
+		$this->_restEndpoint = $this->_join([$this->_settings->domain, 'image']);
+	}
+
 	/**
 	 * @param Asset|string $image
 	 * @param array        $transforms
@@ -49,7 +67,11 @@ class Transformer implements TransformerInterface
 		$transformedImages = [];
 
 		foreach ($transforms as $transform)
-			$transformedImages[] = $this->_getTransformedImage($sourceModel, $image, $transform);
+			$transformedImages[] = $this->_getTransformedImage(
+				$sourceModel,
+				$image,
+				$transform
+			);
 
 		return $transformedImages;
 	}
@@ -66,8 +88,11 @@ class Transformer implements TransformerInterface
 	 * @throws ImagerException
 	 * @throws ErrorException
 	 */
-	private function _getTransformedImage ($sourceModel, $image, $transform)
-	{
+	private function _getTransformedImage (
+		$sourceModel,
+		$image,
+		$transform
+	) {
 		/** @var Settings $settings */
 		$settings = ImagerThumbor::getInstance()->getSettings();
 
@@ -187,9 +212,6 @@ class Transformer implements TransformerInterface
 		$config = ImagerService::getConfig();
 		$client = Craft::createGuzzleClient();
 
-		$restEndpoint = $this->_join([$settings->domain, 'image']);
-		$uploadedPath = null;
-
 		$targetModel = new LocalTargetImageModel($sourceModel, $transform);
 
 		if ($settings->local)
@@ -205,17 +227,7 @@ class Transformer implements TransformerInterface
 				$sourceModel->getLocalCopy();
 				$targetModel->isNew = true;
 
-				$name = uniqid('tb_') . $sourceModel->filename;
-
-				$posted = $client->post($restEndpoint, [
-					'headers' => [
-						'Slug' => $name,
-					],
-					'body' => fopen($sourceModel->getFilePath(), 'r'),
-				]);
-
-				$uploadedPath = str_replace('/image/', '', $posted->getHeader('Location')[0]);
-				$parts[] = $uploadedPath;
+				$parts[] = $this->_getImageUrl($sourceModel);
 			}
 		}
 		else
@@ -232,71 +244,52 @@ class Transformer implements TransformerInterface
 
 		$url = $this->_join(array_merge($url, $parts));
 
-		if ($settings->local)
+		if (!$settings->local)
+			return new ThumborTransformedRemoteImage(['url' => $url]);
+
+		if ($targetModel->isNew)
 		{
-			if ($targetModel->isNew)
+			if (empty($config->storages))
 			{
-
-				if (empty($config->storages))
+				FileHelper::writeToFile(
+					$targetModel->getFilePath(),
+					$client->get($url)->getBody()->getContents()
+				);
+			}
+			else
+			{
+				foreach ($config->storages as $storage)
 				{
-					FileHelper::writeToFile(
-						$targetModel->getFilePath(),
-						$client->get($url)->getBody()->getContents()
-					);
-				}
-				else
-				{
-					foreach ($config->storages as $storage)
+					if (isset(ImagerService::$storage[$storage]))
 					{
-						if (isset(ImagerService::$storage[$storage]))
-						{
-							$storageSettings = $config->storageConfig[$storage] ?? null;
+						$storageSettings = $config->storageConfig[$storage] ?? null;
 
-							if ($storageSettings)
-							{
-								/** @var ImagerStorageInterface $storageClass */
-								$storageClass = ImagerService::$storage[$storage];
-								$storageClass::upload(
-									$url,
-									$targetModel->getFilePath(),
-									true,
-									$storageSettings
-								);
-							}
-							else
-							{
-								$msg = 'Could not find settings for storage "' . $storage . '"';
-								Craft::error($msg, __METHOD__);
-								throw new ImagerException($msg);
-							}
+						if ($storageSettings)
+						{
+							/** @var ImagerStorageInterface $storageClass */
+							$storageClass = ImagerService::$storage[$storage];
+							$storageClass::upload(
+								$url,
+								$targetModel->getFilePath(),
+								true,
+								$storageSettings
+							);
 						}
 						else
 						{
-							$msg = 'Could not find a registered storage with handle "' . $storage . '"';
+							$msg = 'Could not find settings for storage "' . $storage . '"';
 							Craft::error($msg, __METHOD__);
 							throw new ImagerException($msg);
 						}
 					}
+					else
+					{
+						$msg = 'Could not find a registered storage with handle "' . $storage . '"';
+						Craft::error($msg, __METHOD__);
+						throw new ImagerException($msg);
+					}
 				}
-
-				$client->delete(
-					$this->_join([
-						$restEndpoint,
-						$uploadedPath,
-					])
-				);
 			}
-		}
-		else
-		{
-			$targetModel->url = $url;
-		}
-
-		if (!$settings->local)
-		{
-			return new ThumborTransformedRemoteImage([
-				'url' => $targetModel->url,
-			]);
 		}
 
 		return new ThumborTransformedImage(
@@ -308,6 +301,33 @@ class Transformer implements TransformerInterface
 
 	// Helpers
 	// =========================================================================
+
+	private function _getImageUrl (LocalSourceImageModel $asset)
+	{
+		$path = $asset->getFilePath();
+
+		// Use public URLs if available
+		if ($asset->url)
+			return $asset->url;
+
+		if ($uploadedPath = @self::$uploadedImages[$path])
+			return $uploadedPath;
+
+		$posted = Craft::createGuzzleClient()->post($this->_restEndpoint, [
+			'headers' => [
+				'Slug' => $asset->filename,
+			],
+			'body' => fopen($path, 'r'),
+		]);
+
+		$uploadedPath = str_replace(
+			'/image/',
+			'',
+			$posted->getHeader('Location')[0]
+		);
+
+		return self::$uploadedImages[$path] = $uploadedPath;
+	}
 
 	private function _generateKey ($parts, $key)
 	{
@@ -323,11 +343,7 @@ class Transformer implements TransformerInterface
 
 	private function _join ($parts = [])
 	{
-		$parts = array_map(function ($part) {
-			return rtrim($part, '/');
-		}, $parts);
-
-		return implode('/', $parts);
+		return ImagerThumbor::join($parts);
 	}
 
 	private function _parseFilterName ($name)
