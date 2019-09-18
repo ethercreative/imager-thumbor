@@ -232,7 +232,13 @@ class Transformer implements TransformerInterface
 		}
 		else
 		{
-			$parts[] = rawurlencode($image->getUrl());
+			$parts[] = rawurlencode(
+				preg_replace(
+					'#^https?://#',
+					'',
+					strtok($image->getUrl(), '#')
+				)
+			);
 		}
 
 		$url = [$settings->domain];

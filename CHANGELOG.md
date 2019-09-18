@@ -1,3 +1,7 @@
+## 1.0.5.1 - 2019-09-18
+### Fixed
+- Re-added remote URL scheme removal
+
 ## 1.0.5 - 2019-09-18
 ### Improved
 - Better encoding for remote URLs
