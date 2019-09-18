@@ -232,11 +232,7 @@ class Transformer implements TransformerInterface
 		}
 		else
 		{
-			$parts[] = preg_replace(
-				'#^https?://#',
-				'',
-				strtok($image->getUrl(), '#')
-			);
+			$parts[] = rawurlencode($image->getUrl());
 		}
 
 		$url = [$settings->domain];
@@ -340,13 +336,12 @@ class Transformer implements TransformerInterface
 	private function _generateKey ($parts, $key)
 	{
 		$url = $this->_join($parts);
-		$hash = hash_hmac('sha1', $url, $key);
-		$hash = base64_encode($hash);
+		$hash = hash_hmac('sha1', $url, $key, true);
 
-		$hash = str_replace('+', '-', $hash);
-		$hash = str_replace('/', '_', $hash);
-
-		return $hash;
+		return strtr(
+			base64_encode($hash),
+			'/+', '_-'
+		);
 	}
 
 	private function _join ($parts = [])

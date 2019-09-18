@@ -1,3 +1,10 @@
+## 1.0.5 - 2019-09-18
+### Improved
+- Better encoding for remote URLs
+
+### Fixed
+- Fix security key hashing
+
 ## 1.0.4 - 2019-09-18
 ### Fixed
 - Remove scheme and hash from remote image URL
