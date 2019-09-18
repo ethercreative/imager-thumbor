@@ -1,3 +1,7 @@
+## 1.0.4 - 2019-09-18
+### Fixed
+- Remove scheme and hash from remote image URL
+
 ## 1.0.3 - 2019-09-18
 ### Added
 - Add width & height to remote image model
