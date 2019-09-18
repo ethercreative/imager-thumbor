@@ -1,3 +1,7 @@
+## 1.0.3 - 2019-09-18
+### Added
+- Add width & height to remote image model
+
 ## 1.0.2 - 2019-09-13
 ### Improved
 - Improved upload / delete to thumbor

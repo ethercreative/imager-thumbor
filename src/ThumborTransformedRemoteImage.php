@@ -25,12 +25,30 @@ class ThumborTransformedRemoteImage extends Model
 	/** @var string */
 	public $url;
 
+	/** @var int */
+	public $width, $height;
+
 	// Methods
 	// =========================================================================
 
 	public function __toString ()
 	{
 		return $this->url;
+	}
+
+	public function getUrl ()
+	{
+		return $this->url;
+	}
+
+	public function getWidth ()
+	{
+		return $this->width;
+	}
+
+	public function getHeight ()
+	{
+		return $this->height;
 	}
 
 }

@@ -245,7 +245,11 @@ class Transformer implements TransformerInterface
 		$url = $this->_join(array_merge($url, $parts));
 
 		if (!$settings->local)
-			return new ThumborTransformedRemoteImage(['url' => $url]);
+			return new ThumborTransformedRemoteImage([
+				'url' => $url,
+				'width' => $size[0],
+				'height' => $size[1],
+			]);
 
 		if ($targetModel->isNew)
 		{
